@@ -36,7 +36,7 @@ chrome.commands.getAll().then((commands) => {
 const [inputValue, setInputValue] = inputSignal;
 
 const allCommands = createMemo(() => {
-  let commands: Command[] = [
+  const commands: Command[] = [
     ...generalSuggestions(),
     ...audibleTabSuggestions(),
     ...bookmarkThisSuggestions(),
@@ -87,9 +87,26 @@ createEffect(() => {
   setSelectedI(0);
 });
 
-export const runCommand = async (command: Command) => {
+const openUrl = async (url: string, event?: KeyboardEvent) => {
+  window.close();
+
+  if (event?.metaKey) {
+    const tabs = await chrome.tabs.query({
+      active: true,
+      currentWindow: true,
+    });
+    const currentTab = tabs[0];
+    if (currentTab?.id) {
+      chrome.tabs.update(currentTab.id, { url });
+    }
+  } else {
+    chrome.tabs.create({ url: url });
+  }
+};
+
+export const runCommand = async (command: Command, event?: KeyboardEvent) => {
   storeLastUsed(command);
-  if ("url" in command) chrome.tabs.create({ url: command.url });
+  if ("url" in command && command.url) openUrl(command.url, event);
   command.command?.();
 };
 
@@ -105,7 +122,12 @@ tinykeys(window, {
   Enter: (e) => {
     e.preventDefault();
     const selected = filteredCommands()[selectedI()];
-    runCommand(selected);
+    runCommand(selected, e);
+  },
+  "$mod+Enter": (e) => {
+    e.preventDefault();
+    const selected = filteredCommands()[selectedI()];
+    runCommand(selected, e);
   },
 });
 
@@ -131,7 +153,7 @@ const App = () => {
     <>
       <div
         class="App"
-        onBlur={(e) => {
+        onBlur={() => {
           window.close();
         }}
       >
