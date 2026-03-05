@@ -1,9 +1,7 @@
-import { createLazyResource, matchCommand, setInput } from "~/util/signals";
+import { createLazyResource, parsedInput } from "~/util/signals";
 
 import { faviconURL } from "../Entry";
 import { Command } from "./general";
-
-const KEYWORD = "b";
 
 const traverse = (
   nodes: chrome.bookmarks.BookmarkTreeNode[],
@@ -31,19 +29,8 @@ const commands = createLazyResource([], async () => {
   return traverse(root);
 });
 
-const base: Command[] = [
-  {
-    title: "Search Bookmarks",
-    command: async function () {
-      setInput(KEYWORD + ">");
-    },
-    icon: faviconURL("chrome://bookmarks/"),
-    keyword: KEYWORD + ">",
-  },
-];
 export default function bookmarkSuggestions(): Command[] {
-  const { isMatch, isCommand } = matchCommand(KEYWORD);
-  if (isMatch) return commands();
+  const { isCommand } = parsedInput();
   if (isCommand) return [];
-  return base;
+  return commands();
 }
