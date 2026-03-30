@@ -90,17 +90,21 @@ createEffect(() => {
 const openUrl = async (url: string, event?: KeyboardEvent) => {
   window.close();
 
-  if (event?.metaKey) {
-    const tabs = await chrome.tabs.query({
-      active: true,
-      currentWindow: true,
-    });
-    const currentTab = tabs[0];
-    if (currentTab?.id) {
-      chrome.tabs.update(currentTab.id, { url });
-    }
+  const tabs = await chrome.tabs.query({
+    active: true,
+    currentWindow: true,
+  });
+  const currentTab = tabs[0];
+
+  if (event?.metaKey && currentTab?.id) {
+    chrome.tabs.update(currentTab.id, { url });
+  } else if (currentTab?.id && currentTab?.url === "chrome://newtab/") {
+    chrome.tabs.update(currentTab.id, { url });
   } else {
-    chrome.tabs.create({ url: url });
+    chrome.tabs.create({
+      url: url,
+      index: currentTab ? currentTab.index + 1 : undefined,
+    });
   }
 };
 
