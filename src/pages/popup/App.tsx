@@ -56,13 +56,29 @@ const commandsLimit = 75;
 const [scrollIndex, setScrollIndex] = createSignal(commandsLimit);
 
 const matches = createMemo(() => {
-  return fuzzysort.go(parsedInput().query, allCommands(), {
+  const searchKeys = ["title", "subtitle", "url"] as const;
+  const query = parsedInput().query;
+  const splittedQuery = query.toLowerCase().split(" ");
+  return fuzzysort.go(query, allCommands(), {
     threshold: -10000, // don't return bad results
     limit: scrollIndex(), // Don't return more results than this (lower is faster)
     all: true, // If true, returns all results for an empty search
-    keys: ["title", "subtitle", "url"], // For when targets are objects (see its example usage)
+    keys: searchKeys, // For when targets are objects (see its example usage)
     // keys: null, // For when targets are objects (see its example usage)
     // scoreFn: null, // For use with `keys` (see its example usage)
+    scoreFn: (r) => {
+      const indexesOfMatches = searchKeys
+        .map((k) => r.obj[k]?.toLowerCase() ?? "")
+        .flatMap((v) => splittedQuery.map((q) => v.indexOf(q)))
+        .filter((i) => i > -1);
+      const indexOfMatch = indexesOfMatches.length
+        ? Math.min(...indexesOfMatches)
+        : -1;
+      if (indexOfMatch > -1) {
+        return r.score * (1 / indexOfMatch) + 1;
+      }
+      return r.score;
+    },
   });
 });
 
